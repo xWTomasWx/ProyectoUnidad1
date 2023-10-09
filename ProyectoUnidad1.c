@@ -34,6 +34,25 @@ void agregarEstructura(Carta **cabecera, Carta *nuevaCarta){
     }
 }
 
+void quitarCartaMazo(Carta **cabecera, Carta *carta){
+    Carta *actual = *cabecera;
+    Carta *anterior = NULL;
+
+    while(actual != NULL){
+        if(actual == carta){
+            if(anterior != NULL){
+                anterior->siguiente = actual->siguiente;
+            }else{
+                *cabecera = actual->siguiente;
+            }
+            carta->siguiente = NULL;
+            return;
+        }
+        anterior = actual;
+        actual = actual->siguiente;
+    }
+}
+
 void inicializarListaTexto(Carta **cabecera){
     FILE *archivo = fopen("Guardianes.txt", "r");
     if(archivo == NULL){
@@ -63,10 +82,6 @@ void inicializarListaTexto(Carta **cabecera){
 
 int rangoDefensa(Carta **cabecera){
     int defensaMinima = 0, defensaMaxima = 0, defensa;
-    if(*cabecera == NULL){
-        printf("No hay cartas existentes\n");
-        return;
-    }
     Carta *actual = *cabecera;
     defensaMinima = actual->defensa;
     defensaMaxima = actual->defensa;
@@ -87,10 +102,6 @@ int rangoDefensa(Carta **cabecera){
 
 int rangoAtaque(Carta **cabecera){
     int ataqueMinimo = 0, ataqueMaximo = 0, ataque;
-    if(*cabecera == NULL){
-        printf("No hay cartas existentes\n");
-        return;
-    }
     Carta *actual = *cabecera;
     ataqueMinimo = actual->ataque;
     ataqueMaximo = actual->ataque;
@@ -111,10 +122,6 @@ int rangoAtaque(Carta **cabecera){
 
 int rangoVida(Carta **cabecera){
     int vidaMinima = 0, vidaMaxima = 0, vida;
-    if(*cabecera == NULL){
-        printf("No hay cartas existentes\n");
-        return;
-    }
     Carta *actual = *cabecera;
     vidaMinima = actual->vida;
     vidaMaxima = actual->vida;
@@ -145,7 +152,7 @@ void crearCarta(Carta **cabecera){
 	}
     int opcion = 0;
     printf("\nIngrese el nombre de la carta: ");
-    scanf("%s", &nuevaCarta->nombre);
+    scanf("%49s", &nuevaCarta->nombre);
     
     while(opcion > 4 || opcion < 1){
         printf("Seleccione un tipo para su carta:\n1) Mago\n2) Vikingo\n3) Nigromante\n4) Bestia\n");
@@ -204,11 +211,7 @@ int verificarCantidadCartas(Carta **cabecera){
         contador++;
         actual = actual->siguiente;
     }
-    if(contador >= 30){
-        return 1;
-    }else{
-        return 0;
-    }
+    return contador;
 }
 
 void inicializarJugador(Jugador *jugador){
@@ -287,8 +290,28 @@ void barajarMazo(Carta **cabecera) {
     cartas[cantidadCartas - 1]->siguiente = NULL;
 }
 
+Carta *obtenerCartaIndice(Carta **cabecera, int contador){
+    int i;
+    Carta *actual = *cabecera;
+    for(i=1; i<contador; i++){
+        actual = actual->siguiente;
+    }
+    return actual;
+}
+
+void juntarCartas(Carta **cabeceraPrincipal, Carta **cabeceraSecundaria){
+	Carta *actual = *cabeceraPrincipal;
+	if(actual == NULL){
+		cabeceraPrincipal = cabeceraSecundaria;
+	}
+	while(actual->siguiente != NULL){
+		actual = actual->siguiente;
+	}
+	actual->siguiente = *cabeceraSecundaria;
+}
+
 void juegoCartas(Carta **cabecera){
-    if(verificarCantidadCartas(cabecera) == 0){
+    if(verificarCantidadCartas(cabecera) < 30){
         printf("\nNumero de cartas insuficientes para comenzar a jugar\n");
         return;
     }
@@ -301,21 +324,90 @@ void juegoCartas(Carta **cabecera){
     barajarMazo(cabecera);
 	
     agregarCartasMazo(usuario, CPU, cabecera);
+    int contador = 0, opcion;
+    while(contador < 3){
+        printf("Seleccione una carta para su mano:\n");
+        imprimirLista(usuario->cabeceraCartasEnMazo);
+        printf("Ingrese el numero: ");
+        if(scanf("%d", &opcion) != 1){
+        	opcion = verificarCantidadCartas(&usuario->cabeceraCartasEnMazo)+1;
+        	while(getchar() != '\n');
+		}
+        if(opcion > 0 && opcion < (verificarCantidadCartas(&usuario->cabeceraCartasEnMazo)+1)){
+            Carta *cartaElegida = obtenerCartaIndice(&usuario->cabeceraCartasEnMazo, opcion);
+            quitarCartaMazo(&usuario->cabeceraCartasEnMazo, cartaElegida);
+            agregarEstructura(&usuario->cabeceraCartasEnMano, cartaElegida);
+            contador++;
+            
+            Carta *cartaRandom = obtenerCartaIndice(&CPU->cabeceraCartasEnMazo, rand()%verificarCantidadCartas(&CPU->cabeceraCartasEnMazo)+1);
+            quitarCartaMazo(&CPU->cabeceraCartasEnMazo, cartaRandom);
+            agregarEstructura(&CPU->cabeceraCartasEnMano, cartaRandom);
+            
+        }else{
+            printf("Opcion no valida\n");
+        }
+    }
+    
+    barajarMazo(&usuario->cabeceraCartasEnMazo);
+    
+    opcion = 0;
+    
+    while(usuario->vida > 0 && CPU->vida > 0){
+    	printf("Seleccione una opcion:\n1) Sacar carta\n2) Atacar\n3) Colocar carta\n");
+        printf("Ingrese el numero: ");
+        if(scanf("%d", &opcion) != 1){
+        	opcion = 4;
+        	while(getchar() != '\n');
+		}
+        if(opcion == 1){
+        	Carta *carta = obtenerCartaIndice(&usuario->cabeceraCartasEnMazo, 1);
+            quitarCartaMazo(&usuario->cabeceraCartasEnMazo, carta);
+            agregarEstructura(&usuario->cabeceraCartasEnMano, carta);
+        }
+        if(opcion == 2){
+        	
+        }
+        if(opcion == 3){
+        	int opcion2, verificar = 0;
+        	while(verificar == 0){
+        		printf("Seleccione una carta para colocar en la mesa:\n");
+		        imprimirLista(usuario->cabeceraCartasEnMano);
+		        printf("Ingrese el numero: ");
+		        if(scanf("%d", &opcion2) != 1){
+		        	opcion2 = verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1;
+		        	while(getchar() != '\n');
+				}
+		        if(opcion2 > 0 && opcion2 < (verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1)){
+		            Carta *cartaElegida = obtenerCartaIndice(&usuario->cabeceraCartasEnMano, opcion2);
+		            quitarCartaMazo(&usuario->cabeceraCartasEnMano, cartaElegida);
+		            agregarEstructura(&usuario->cabeceraCartasEnMesa, cartaElegida);
+		            verificar = 1;
+		        }else{
+		            printf("Opcion no valida\n");
+		        }
+			}
+        	
+        }
+        if(opcion < 1 || opcion > 3){
+        	printf("Opcion no valida\n");
+		}
+	}
+    
     
     
     imprimirLista(usuario->cabeceraCartasEnMazo);
     printf("\n\n\n");
     imprimirLista(CPU->cabeceraCartasEnMazo);
-	printf("\n\n\n");
-    imprimirLista(*cabecera);
 	
 	
-	limpiarLista(usuario->cabeceraCartasEnMano);
-	limpiarLista(usuario->cabeceraCartasEnMazo);
-	limpiarLista(usuario->cabeceraCartasEnMesa);
-	limpiarLista(CPU->cabeceraCartasEnMano);
-	limpiarLista(CPU->cabeceraCartasEnMazo);
-	limpiarLista(CPU->cabeceraCartasEnMesa);
+	juntarCartas(cabecera, &usuario->cabeceraCartasEnMano);
+	juntarCartas(cabecera, &usuario->cabeceraCartasEnMazo);
+	juntarCartas(cabecera, &usuario->cabeceraCartasEnMesa);
+	juntarCartas(cabecera, &CPU->cabeceraCartasEnMano);
+	juntarCartas(cabecera, &CPU->cabeceraCartasEnMazo);
+	juntarCartas(cabecera, &CPU->cabeceraCartasEnMesa);
+	free(usuario);
+	free(CPU);
 }
 
 void menu(Carta **cabecera){

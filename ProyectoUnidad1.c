@@ -351,46 +351,134 @@ void juegoCartas(Carta **cabecera){
     barajarMazo(&usuario->cabeceraCartasEnMazo);
     
     opcion = 0;
-    
+    int activarTurnoCPU = 0;
     while(usuario->vida > 0 && CPU->vida > 0){
-    	printf("Seleccione una opcion:\n1) Sacar carta\n2) Atacar\n3) Colocar carta\n");
+    	printf("Seleccione una opcion:\n1) Sacar carta\n2) Atacar\n3) Colocar carta\n4) Mostrar cartas (no gasta tu turno)\n");
         printf("Ingrese el numero: ");
         if(scanf("%d", &opcion) != 1){
-        	opcion = 4;
+        	opcion = 5;
         	while(getchar() != '\n');
 		}
+        activarTurnoCPU = 1;
         if(opcion == 1){
-        	Carta *carta = obtenerCartaIndice(&usuario->cabeceraCartasEnMazo, 1);
-            quitarCartaMazo(&usuario->cabeceraCartasEnMazo, carta);
-            agregarEstructura(&usuario->cabeceraCartasEnMano, carta);
+            if(verificarCantidadCartas(&usuario->cabeceraCartasEnMazo) > 0){
+                Carta *carta = obtenerCartaIndice(&usuario->cabeceraCartasEnMazo, 1);
+                quitarCartaMazo(&usuario->cabeceraCartasEnMazo, carta);
+                agregarEstructura(&usuario->cabeceraCartasEnMano, carta);
+                printf("Carta obtenida:\nNombre: %s, Tipo: %s, Vida: %d, Ataque: %d, Defensa: %d\n", 
+                        carta->nombre, carta->tipo, carta->vida, carta->ataque, carta->defensa);
+            }else{
+                printf("No quedan cartas en tu mazo\n");
+                activarTurnoCPU = 0;
+            }
+        	
         }
         if(opcion == 2){
-        	
+        	if(verificarCantidadCartas(&usuario->cabeceraCartasEnMesa) > 0){
+                if(verificarCantidadCartas(&CPU->cabeceraCartasEnMesa) > 0){
+                    int opcion4, verificar = 0;
+                    while(verificar == 0){
+                        printf("Seleccione una carta para atacar:\n");
+                        imprimirLista(usuario->cabeceraCartasEnMesa);
+                        printf("Ingrese el numero: ");
+                        if(scanf("%d", &opcion4) != 1){
+                            opcion4 = verificarCantidadCartas(&usuario->cabeceraCartasEnMesa)+1;
+                            while(getchar() != '\n');
+                        }
+                        if(opcion4 > 0 && opcion4 < (verificarCantidadCartas(&usuario->cabeceraCartasEnMesa)+1)){
+                            Carta *cartaElegida = obtenerCartaIndice(&usuario->cabeceraCartasEnMesa, opcion4);
+                            int opcion5 = 0;
+                            printf("Seleccione la carta enemiga que va a atacar:\n");
+                            imprimirLista(CPU->cabeceraCartasEnMesa);
+                            printf("Ingrese el numero: ");
+                            if(scanf("%d", &opcion5) != 1){
+                                opcion4 = verificarCantidadCartas(&CPU->cabeceraCartasEnMesa)+1;
+                                while(getchar() != '\n');
+                            }
+                            if(opcion5 > 0 && opcion5 < (verificarCantidadCartas(&CPU->cabeceraCartasEnMesa+1))){
+                                Carta *cartaEnemiga = obtenerCartaIndice(&CPU->cabeceraCartasEnMesa, opcion5);
+                                if(cartaElegida->ataque >= cartaEnemiga->defensa){
+                                    printf("El enemigo perdio un punto de vida, le quedan %d\n", CPU->vida);
+                                    if(CPU->vida <= 0){
+                                        activarTurnoCPU = 0;
+                                        printf("\nFELICIDADES GANASTE LA PARTIDA\n");
+                                    }
+                                }else{
+                                    printf("Tu ataque fallo\n");
+                                }
+                                verificar = 1;
+                            }else{
+                                printf("Opcion no valida\n");
+                            }
+
+                        }else{
+                            printf("Opcion no valida\n");
+                        }
+                    }
+                }else{
+                    printf("El enemigo no posee cartas en mesa\n");
+                    activarTurnoCPU = 0;
+                }
+            }else{
+                printf("No posees cartas en la mesa, intente colocar una para comenzar a atacar\n");
+                activarTurnoCPU = 0;
+            }
         }
         if(opcion == 3){
-        	int opcion2, verificar = 0;
-        	while(verificar == 0){
-        		printf("Seleccione una carta para colocar en la mesa:\n");
-		        imprimirLista(usuario->cabeceraCartasEnMano);
-		        printf("Ingrese el numero: ");
-		        if(scanf("%d", &opcion2) != 1){
-		        	opcion2 = verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1;
-		        	while(getchar() != '\n');
-				}
-		        if(opcion2 > 0 && opcion2 < (verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1)){
-		            Carta *cartaElegida = obtenerCartaIndice(&usuario->cabeceraCartasEnMano, opcion2);
-		            quitarCartaMazo(&usuario->cabeceraCartasEnMano, cartaElegida);
-		            agregarEstructura(&usuario->cabeceraCartasEnMesa, cartaElegida);
-		            verificar = 1;
-		        }else{
-		            printf("Opcion no valida\n");
-		        }
-			}
-        	
+            if(verificarCantidadCartas(&usuario->cabeceraCartasEnMano) > 0){
+                int opcion2, verificar = 0;
+                while(verificar == 0){
+                    printf("Seleccione una carta para colocar en la mesa:\n");
+                    imprimirLista(usuario->cabeceraCartasEnMano);
+                    printf("Ingrese el numero: ");
+                    if(scanf("%d", &opcion2) != 1){
+                        opcion2 = verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1;
+                        while(getchar() != '\n');
+                    }
+                    if(opcion2 > 0 && opcion2 < (verificarCantidadCartas(&usuario->cabeceraCartasEnMano)+1)){
+                        Carta *cartaElegida = obtenerCartaIndice(&usuario->cabeceraCartasEnMano, opcion2);
+                        quitarCartaMazo(&usuario->cabeceraCartasEnMano, cartaElegida);
+                        agregarEstructura(&usuario->cabeceraCartasEnMesa, cartaElegida);
+                        verificar = 1;
+                        printf("\nCarta colocada\n");
+                    }else{
+                        printf("Opcion no valida\n");
+                    }
+                }
+            }else{
+                printf("No hay suficientes cartas en la mano para colocar\n");
+                activarTurnoCPU = 0;
+            }
         }
-        if(opcion < 1 || opcion > 3){
+        if(opcion == 4){
+            int opcion3 = 0;
+            while(opcion3 < 1 || opcion3 > 2){
+                printf("Seleccione una opcion:\n1) Ver cartas de la mano\n2) Ver cartas de la mesa\n");
+                printf("Ingrese el numero: ");
+                if(scanf("%d", &opcion3) != 1){
+                    opcion3 = 3;
+                    while(getchar() != '\n');
+                }
+                if(opcion3 == 1){
+                    imprimirLista(usuario->cabeceraCartasEnMano);
+                }
+                if(opcion3 == 2){
+                    imprimirLista(usuario->cabeceraCartasEnMesa);
+                }
+                if(opcion3 == 3){
+                    printf("Opcion no valida\n");
+                }
+            }
+            activarTurnoCPU = 0;
+            
+        }
+        if(opcion < 1 || opcion > 4){
         	printf("Opcion no valida\n");
 		}
+
+        if(activarTurnoCPU == 1){
+
+        }
 	}
     
     
@@ -426,10 +514,11 @@ void menu(Carta **cabecera){
             juegoCartas(cabecera);
         }
         if(opcion == 3){
-            
+            printf("\nSin implementar todavia\n");
         }
         if(opcion == 4){
             printf("Saliendo del juego\n");
+            return;
         }
         if(opcion < 1 || opcion > 4){
             printf("Opcion no valida\n");

@@ -20,6 +20,11 @@ typedef struct
     Carta *cabeceraCartasEnMesa;
     Carta *cabeceraCartasEnMazo;
 }Jugador;
+//Estructura donde se guardan los datos de cada accion realizada en el juego
+typedef struct Historial{
+    char accion[500];
+    struct Historial *siguiente;
+}Historial;
 
 //Esta funcion sirve para agregar una estructura carta en una lista enlazada
 void agregarEstructura(Carta **cabecera, Carta *nuevaCarta){
@@ -319,12 +324,20 @@ void juntarCartas(Carta **cabeceraPrincipal, Carta **cabeceraSecundaria){
 	}
 	actual->siguiente = *cabeceraSecundaria;
 }
+//Esta funcion sirve para asignarle espacio a la estructura historial y colocar el siguiente en null
+Historial *inicializarAccion(){
+    Historial *accionH = (Historial*)malloc(sizeof(Historial));
+    accionH->siguiente = NULL;
+    return accionH;
+}
+
 //Esta funcion sirve para correr todo el juego de cartas (quizas tuve que crear mas funciones, esta funcion quedo muy larga)
-void juegoCartas(Carta **cabecera){
+void juegoCartas(Carta **cabecera, Historial **historial){
     if(verificarCantidadCartas(cabecera) < 30){
         printf("\nNumero de cartas insuficientes para comenzar a jugar\n");
         return;
     }
+    Historial *accionH = inicializarAccion();
     
     Jugador *usuario = (Jugador*)malloc(sizeof(Jugador));
     Jugador *CPU = (Jugador*)malloc(sizeof(Jugador));
@@ -334,6 +347,10 @@ void juegoCartas(Carta **cabecera){
     barajarMazo(cabecera);
 	
     agregarCartasMazo(usuario, CPU, cabecera);
+    
+    strcpy(accionH->accion, "Los jugadores escogeran cartas para su mano");
+    *historial = accionH;
+    Historial *actualH = *historial;
     int contador = 0, opcion;
     while(contador < 3){
         printf("Seleccione una carta para su mano:\n");
@@ -348,10 +365,20 @@ void juegoCartas(Carta **cabecera){
             quitarCartaMazo(&usuario->cabeceraCartasEnMazo, cartaElegida);
             agregarEstructura(&usuario->cabeceraCartasEnMano, cartaElegida);
             contador++;
+            accionH = inicializarAccion();
+            strcpy(accionH->accion, "El usuario selecciono la carta ");
+            strcat(accionH->accion, cartaElegida->nombre);
+            actualH->siguiente = accionH;
+			actualH = actualH->siguiente;
             
             Carta *cartaRandom = obtenerCartaIndice(&CPU->cabeceraCartasEnMazo, rand()%verificarCantidadCartas(&CPU->cabeceraCartasEnMazo)+1);
             quitarCartaMazo(&CPU->cabeceraCartasEnMazo, cartaRandom);
             agregarEstructura(&CPU->cabeceraCartasEnMano, cartaRandom);
+            accionH = inicializarAccion();
+            strcpy(accionH->accion, "La CPU selecciono la carta ");
+            strcat(accionH->accion, cartaRandom->nombre);
+            actualH->siguiente = accionH;
+			actualH = actualH->siguiente;
             
         }else{
             printf("Opcion no valida\n");
@@ -370,6 +397,12 @@ void juegoCartas(Carta **cabecera){
 	            agregarEstructura(&usuario->cabeceraCartasEnMano, carta);
 	            printf("Carta obtenida:\nNombre: %s, Tipo: %s, Vida: %d, Ataque: %d, Defensa: %d\n", 
 	                    carta->nombre, carta->tipo, carta->vida, carta->ataque, carta->defensa);
+                
+                accionH = inicializarAccion();
+                strcpy(accionH->accion, "El usuario saco del mazo la carta ");
+                strcat(accionH->accion, carta->nombre);
+                actualH->siguiente = accionH;
+				actualH = actualH->siguiente;
 	        }else{
 	            printf("No quedan cartas en tu mazo\n");
 	        }
@@ -407,18 +440,37 @@ void juegoCartas(Carta **cabecera){
                             }
                             if(opcion5 > 0 && opcion5 < (verificarCantidadCartas(&CPU->cabeceraCartasEnMesa+1))){
                                 Carta *cartaEnemiga = obtenerCartaIndice(&CPU->cabeceraCartasEnMesa, opcion5);
+
+                                accionH = inicializarAccion();
+                                strcpy(accionH->accion, "El usuario ataco con la carta ");
+                                strcat(accionH->accion, cartaElegida->nombre);
+                                actualH->siguiente = accionH;
+			                    actualH = actualH->siguiente;
+
+                                accionH = inicializarAccion();
+                                strcpy(accionH->accion, "El ataque lo recibio la carta ");
+                                strcat(accionH->accion, cartaEnemiga->nombre);
+                                    
+
                                 if(cartaElegida->ataque >= cartaEnemiga->defensa){
                                     CPU->vida--;
                                     quitarCartaMazo(&CPU->cabeceraCartasEnMesa, cartaEnemiga);
                                     juntarCartas(cabecera, &cartaEnemiga);
+
+                                    strcat(accionH->accion, ", el ataque funciono, la CPU perdio 1 de vida");
+
                                     printf("El enemigo perdio un punto de vida, le quedan %d\n", CPU->vida);
                                     if(CPU->vida <= 0){
+                                        strcat(accionH->accion, ", GANO EL USUARIO");
                                         activarTurnoCPU = 0;
                                         printf("\nFELICIDADES GANASTE LA PARTIDA\n");
                                     }
                                 }else{
+                                    strcat(accionH->accion, ", el ataque fallo");
                                     printf("Tu ataque fallo\n");
                                 }
+                                actualH->siguiente = accionH;
+			                    actualH = actualH->siguiente;
                                 verificar = 1;
                                 sacarCarta = 0;
                             }else{
@@ -457,6 +509,11 @@ void juegoCartas(Carta **cabecera){
                         agregarEstructura(&usuario->cabeceraCartasEnMesa, cartaElegida);
                         verificar = 1;
                         sacarCarta = 0;
+                        accionH = inicializarAccion();
+                        strcpy(accionH->accion, "El usuario coloco la carta ");
+                        strcat(accionH->accion, cartaElegida->nombre);
+                        actualH->siguiente = accionH;
+			            actualH = actualH->siguiente;
                         printf("\nCarta colocada\n");
                     }else{
                         printf("Opcion no valida\n");
@@ -501,6 +558,13 @@ void juegoCartas(Carta **cabecera){
                 Carta *carta = obtenerCartaIndice(&CPU->cabeceraCartasEnMazo, 1);
                 quitarCartaMazo(&CPU->cabeceraCartasEnMazo, carta);
                 agregarEstructura(&CPU->cabeceraCartasEnMano, carta);
+
+                accionH = inicializarAccion();
+                strcpy(accionH->accion, "La CPU saco del mazo la carta ");
+                strcat(accionH->accion, carta->nombre);
+                actualH->siguiente = accionH;
+			    actualH = actualH->siguiente;
+
                 printf("CPU Obtuvo una carta\n");
             }else{
                 printf("No quedan cartas en el mazo de CPU\n");
@@ -516,6 +580,13 @@ void juegoCartas(Carta **cabecera){
                         agregarEstructura(&CPU->cabeceraCartasEnMesa, cartaElegida);
                         printf("CPU coloco la carta:\nNombre: %s, Tipo: %s, Vida: %d, Ataque: %d, Defensa: %d\n",
                                 cartaElegida->nombre, cartaElegida->tipo, cartaElegida->vida, cartaElegida->ataque, cartaElegida->defensa);
+
+                        accionH = inicializarAccion();
+                        strcpy(accionH->accion, "La CPU coloco la carta ");
+                        strcat(accionH->accion, cartaElegida->nombre);
+                        actualH->siguiente = accionH;
+			            actualH = actualH->siguiente;
+
                     }else{
                         turnoCPU = 0;
                         activar1 = 1;
@@ -523,21 +594,36 @@ void juegoCartas(Carta **cabecera){
                 }else{
                     if(verificarCantidadCartas(&CPU->cabeceraCartasEnMesa) > 0){
                         if(verificarCantidadCartas(&usuario->cabeceraCartasEnMesa) > 0){
-                            Carta *cartaRandom = obtenerCartaIndice(&CPU->cabeceraCartasEnMano, rand()%verificarCantidadCartas(&CPU->cabeceraCartasEnMesa)+1);
+                            Carta *cartaRandom = obtenerCartaIndice(&CPU->cabeceraCartasEnMesa, rand()%verificarCantidadCartas(&CPU->cabeceraCartasEnMesa)+1);
                             Carta *cartaDebil = obtenerCartaDebil(&usuario->cabeceraCartasEnMesa);
                             printf("La carta enemiga %s ataco a tu carta %s\n", cartaRandom->nombre, cartaDebil->nombre);
+
+                            accionH = inicializarAccion();
+                            strcpy(accionH->accion, "La CPU ataco con la carta ");
+                            strcat(accionH->accion, cartaRandom->nombre);
+                            actualH->siguiente = accionH;
+			                actualH = actualH->siguiente;
+
+                            accionH = inicializarAccion();
+                            strcpy(accionH->accion, "El ataque lo recibio la carta ");
+                            strcat(accionH->accion, cartaDebil->nombre);
+
                             if(cartaRandom->ataque >= cartaDebil->defensa){
                                 usuario->vida--;
                                 quitarCartaMazo(&usuario->cabeceraCartasEnMesa, cartaDebil);
                                 juntarCartas(cabecera, &cartaDebil);
-                                
+                                strcat(accionH->accion, ", el ataque funcion, el usuario perdio 1 vida");
                                 printf("El enemigo te ataco perdiste un punto de vida, te quedan %d\n", usuario->vida);
                                 if(usuario->vida <= 0){
+                                    strcat(accionH->accion, ", GANO LA CPU");
                                     printf("LA CPU GANO LA PARTIDA\n");
                                 }
                             }else{
+                                strcat(accionH->accion, ", el ataque fallo");
                                 printf("El ataque fallo\n");
                             }
+                            actualH->siguiente = accionH;
+			                actualH = actualH->siguiente;
                         }else{
                             turnoCPU = 0;
                             contador++;
@@ -552,7 +638,8 @@ void juegoCartas(Carta **cabecera){
             }
         }
 	}
-    
+    //Aqui junto todas las carta para cuando termine el programa en la funcion limpiar lista se liberen todas las cartas a la vez
+    //tambien sirve para que vuelvan a jugar ya que con esto estaria todo el mazo ya listo
 	juntarCartas(cabecera, &usuario->cabeceraCartasEnMano);
 	juntarCartas(cabecera, &usuario->cabeceraCartasEnMazo);
 	juntarCartas(cabecera, &usuario->cabeceraCartasEnMesa);
@@ -562,9 +649,31 @@ void juegoCartas(Carta **cabecera){
 	free(usuario);
 	free(CPU);
 }
+//Esta funcion sirve para liberar la memoria que utiliza el historial
+void limpiarHistorial(Historial *historial){
+    while (historial != NULL) {
+        Historial *temporal = historial;
+        historial = historial->siguiente;
+        free(temporal);
+    }
+}
+//Imprime las acciones de una lista de estructura historial
+void imprimirHistorial(Historial *historial){
+    Historial *actual = historial;
+    if(actual == NULL){
+        printf("Todavia no se inicia una partida\n");
+        return;
+    }
+    while(actual != NULL){
+        printf("%s\n", actual->accion);
+        actual = actual->siguiente;
+    }
+}
+
 //Esta funcion sirve para el menu principal, ofrece crear carta, jugar o mostrar el historial
 void menu(Carta **cabecera){
     int opcion=0;
+    Historial *historial = NULL;
     while(opcion != 4){
         printf("Seleccione una opcion:\n1) Crear carta\n2) Jugar\n3) Ver historial\n4) Salir\n");
         printf("Ingrese el numero: ");
@@ -576,13 +685,16 @@ void menu(Carta **cabecera){
             crearCarta(cabecera);
         }
         if(opcion == 2){
-            juegoCartas(cabecera);
+            limpiarHistorial(historial);
+            historial = NULL;
+            juegoCartas(cabecera, &historial);
         }
         if(opcion == 3){
-            printf("\nSin implementar todavia\n");
+            imprimirHistorial(historial);
         }
         if(opcion == 4){
             printf("Saliendo del juego\n");
+            limpiarHistorial(historial);
             return;
         }
         if(opcion < 1 || opcion > 4){
@@ -597,7 +709,6 @@ int main(){
 	Carta *cabecera = NULL;
     inicializarListaTexto(&cabecera);
     menu(&cabecera);
-    imprimirLista(cabecera);
 	limpiarLista(cabecera);
 	
 	return 0;
